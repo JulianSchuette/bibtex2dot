@@ -15,6 +15,7 @@ import bibtex.expansions.ExpansionException;
 import bibtex.expansions.MacroReferenceExpander;
 import bibtex.expansions.PersonListExpander;
 import bibtex.parser.BibtexParser;
+import bibtex.parser.ParseException;
 
 /**
  * BibTeX2Dot main class.
@@ -38,8 +39,10 @@ public class Bibtex2Dot {
 	 * Main method for calling BibTeX2Dot.
 	 * @param args
 	 * @throws IOException
+	 * @throws ParseException 
+	 * @throws ExpansionException 
 	 */
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, ParseException, ExpansionException {
 		if (args.length!=3) {
 			usage();
 			System.exit(-1);
@@ -47,8 +50,7 @@ public class Bibtex2Dot {
 		generate(args);
 	}
 	
-	public static void generate(String[] args) throws IOException {
-		// long startTime = System.currentTimeMillis();
+	public static void generate(String[] args) throws IOException, ParseException, ExpansionException {
 		if (args.length < 1) {
 			usage();
 			return;
@@ -75,50 +77,37 @@ public class Bibtex2Dot {
 			} 
 		}
 
-		try {
-			String filename = args[0];
-			System.out.println("Parsing \"" + filename + "\" ... ");
-			parser.parse(bibtexFile, new FileReader(filename));
-		} catch (Exception e) {
-			System.err.println("Fatal exception: ");
-			e.printStackTrace();
-			return;
-		} finally {
-			// printNonFatalExceptions(parser.getExceptions());
-		}
-		try {
-			if (expandMacros) {
-				System.err.println("\n\nExpanding macros ...");
-				MacroReferenceExpander expander = new MacroReferenceExpander(
-						true, true, dropMacros, false);
-				expander.expand(bibtexFile);
-				// printNonFatalExceptions(expander.getExceptions());
+		String filename = args[0];
+		System.out.println("Parsing \"" + filename + "\" ... ");
+		parser.parse(bibtexFile, new FileReader(filename));
+		
+		if (expandMacros) {
+			System.err.println("\n\nExpanding macros ...");
+			MacroReferenceExpander expander = new MacroReferenceExpander(
+					true, true, dropMacros, false);
+			expander.expand(bibtexFile);
+			// printNonFatalExceptions(expander.getExceptions());
 
-			}
-			if (expandCrossrefs) {
-				System.err.println("\n\nExpanding crossrefs ...");
-				CrossReferenceExpander expander = new CrossReferenceExpander(
-						false);
-				expander.expand(bibtexFile);
-				// printNonFatalExceptions(expander.getExceptions());
-			}
-			if (expandPersonLists) {
-				System.err.println("\n\nExpanding person lists ...");
-				PersonListExpander expander = new PersonListExpander(true,
-						true, false);
-				expander.expand(bibtexFile);
-				// printNonFatalExceptions(expander.getExceptions());
-			}
-		} catch (ExpansionException e1) {
-			e1.printStackTrace();
-			return;
 		}
+		if (expandCrossrefs) {
+			System.err.println("\n\nExpanding crossrefs ...");
+			CrossReferenceExpander expander = new CrossReferenceExpander(
+					false);
+			expander.expand(bibtexFile);
+			// printNonFatalExceptions(expander.getExceptions());
+		}
+		if (expandPersonLists) {
+			System.err.println("\n\nExpanding person lists ...");
+			PersonListExpander expander = new PersonListExpander(true,
+					true, false);
+			expander.expand(bibtexFile);
+			// printNonFatalExceptions(expander.getExceptions());
+		}
+
 		if (noOutput)
 			return;
 
-		// bibtexFile.printBibtex(out);
 		BufferedWriter out = new BufferedWriter(new FileWriter(args[1]));
-		// FileWriter out = new FileWriter("/home/julian/Desktop/graph4.dot");
 		out.write("graph bibliography {\n");
 		out.write("size=\"7,7\";\n");
 		out.write("ratio=\"0.8\";\n");
@@ -175,9 +164,6 @@ public class Bibtex2Dot {
 							for (int k = j+1; k < keys.length; k++) {
 								if (keys[j].trim().length()>0 &&keys[k].trim().length()>0)
 									graphFile.addNode(keys[j].trim(), keys[k].trim());
-								//out.write(keys[j].trim() + " -- " + keys[k].trim());
-								//out.write("   [f=5 color=\"#"+Integer.toHexString(c.getRGB()).substring(2)+"\"]");
-								//out.write(";\n");
 							}
 						}
 					}
@@ -193,13 +179,4 @@ public class Bibtex2Dot {
 		System.out.println("Finished. Use dot, neato or fdp to create images from " + args[1]);
 	}
 
-	private static void printNonFatalExceptions(Exception[] exceptions) {
-		if (exceptions.length > 0) {
-			System.err.println("Non-fatal exceptions: ");
-			for (int i = 0; i < exceptions.length; i++) {
-				exceptions[i].printStackTrace();
-				System.err.println("===================");
-			}
-		}
-	}
 }
